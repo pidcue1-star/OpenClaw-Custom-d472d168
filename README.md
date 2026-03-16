@@ -20,8 +20,8 @@ A customized [OpenClaw](https://github.com/openclaw/openclaw) deployment with fr
 ### 1. Clone and configure
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/OpenClaw-Custom-XXXXX.git
-cd OpenClaw-Custom-*
+git clone https://github.com/pidcue1-star/OpenClaw-Custom-d472d168.git
+cd OpenClaw-Custom-d472d168
 cp .env.example .env
 # Edit .env with your actual API keys
 ```
