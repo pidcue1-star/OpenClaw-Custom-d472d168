@@ -1,0 +1,14 @@
+{
+  "version": "1.0",
+  "max_steps": 6,
+  "max_tool_calls": 3,
+  "max_tokens_per_run": 2000,
+  "tasks": [],
+  "last_heartbeat": null,
+  "heartbeat_count": 0,
+  "errors": [],
+  "metadata": {
+    "created": "2026-03-16T00:00:00Z",
+    "description": "Progress tracking state for smart heartbeat monitoring"
+  }
+}

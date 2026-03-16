@@ -1,0 +1,228 @@
+{
+  // OpenClaw Custom Configuration
+  // Frugal multi-provider LLM routing with token budget management
+
+  identity: {
+    name: "OpenClaw Custom",
+    theme: "frugal, efficient AI assistant with smart routing",
+    emoji: "🦞",
+  },
+
+  // Environment variables (secrets referenced via ${VAR})
+  env: {
+    vars: {
+      GROQ_API_KEY: "${GROQ_API_KEY}",
+      GEMINI_API_KEY: "${GEMINI_API_KEY}",
+      MISTRAL_API_KEY: "${MISTRAL_API_KEY}",
+      ANTHROPIC_API_KEY: "${CLAUDE_API_KEY}",
+      DEEPSEEK_API_KEY: "${DEEPSEEK_API_KEY}",
+      OPENAI_API_KEY: "${OPENAI_API_KEY}",
+      HUGGINGFACE_ACCESS_TOKEN: "${HUGGINGFACE_ACCESS_TOKEN}",
+    },
+  },
+
+  // Logging configuration
+  logging: {
+    level: "info",
+    file: "/data/logs/openclaw.log",
+    consoleLevel: "info",
+    consoleStyle: "pretty",
+    redactSensitive: "tools",
+  },
+
+  // Frugal LLM Routing Configuration
+  // Coding -> DeepSeek (cost-effective coding model)
+  // Reasoning -> Anthropic Claude (strongest reasoning)
+  // Quick -> Llama3 via Groq (fastest inference)
+  // General -> Mistral (balanced cost/quality)
+  // Fallback -> OpenAI GPT (reliable fallback)
+  agents: {
+    defaults: {
+      workspace: "/data/workspace",
+      userTimezone: "UTC",
+
+      // Primary model: Mistral for general use (cost-effective)
+      model: {
+        primary: "mistral/mistral-large-latest",
+        fallbacks: [
+          "groq/llama-3.3-70b-versatile",
+          "openai/gpt-4o-mini",
+          "google/gemini-2.0-flash",
+        ],
+      },
+
+      // Model catalog with aliases for quick switching
+      models: {
+        "deepseek/deepseek-coder": { alias: "code" },
+        "anthropic/claude-sonnet-4-5": { alias: "reason" },
+        "groq/llama-3.3-70b-versatile": { alias: "quick" },
+        "mistral/mistral-large-latest": { alias: "general" },
+        "openai/gpt-4o-mini": { alias: "fallback" },
+        "google/gemini-2.0-flash": { alias: "gemini" },
+      },
+
+      // Token budget: conservative defaults
+      thinkingDefault: "low",
+      verboseDefault: "off",
+      timeoutSeconds: 300,
+      maxConcurrent: 2,
+
+      // Image model: use Gemini Flash (free tier friendly)
+      imageModel: {
+        primary: "google/gemini-2.0-flash",
+      },
+
+      // Smart heartbeat: progress-based, cost-aware
+      heartbeat: {
+        every: "30m",
+        model: "groq/llama-3.3-70b-versatile",
+        target: "none",
+        lightContext: true,
+        isolatedSession: true,
+        prompt: "Read HEARTBEAT.md if it exists. Check progress_state.json for task status. Only report if: (1) a task is stalled with no progress, (2) an error needs attention, or (3) a task completed. If nothing needs attention, reply HEARTBEAT_OK. Do NOT scan all files or folders. Keep response under 200 tokens.",
+        ackMaxChars: 200,
+        activeHours: {
+          start: "06:00",
+          end: "23:00",
+        },
+      },
+
+      // Memory search with Gemini embeddings (free tier)
+      memorySearch: {
+        provider: "gemini",
+        model: "gemini-embedding-001",
+        remote: {
+          apiKey: "${GEMINI_API_KEY}",
+        },
+      },
+
+      // Sandboxing for secure execution
+      sandbox: {
+        mode: "non-main",
+        scope: "agent",
+      },
+    },
+  },
+
+  // Custom model providers for frugal routing
+  models: {
+    mode: "merge",
+    providers: {
+      groq: {
+        baseUrl: "https://api.groq.com/openai/v1",
+        apiKey: "${GROQ_API_KEY}",
+        api: "openai-chat",
+        models: [
+          {
+            id: "llama-3.3-70b-versatile",
+            name: "Llama 3.3 70B (Groq)",
+            reasoning: false,
+            input: ["text"],
+            contextWindow: 128000,
+            maxTokens: 32000,
+            cost: { input: 0.59, output: 0.79, cacheRead: 0, cacheWrite: 0 },
+          },
+          {
+            id: "llama-3.1-8b-instant",
+            name: "Llama 3.1 8B Instant (Groq)",
+            reasoning: false,
+            input: ["text"],
+            contextWindow: 128000,
+            maxTokens: 8000,
+            cost: { input: 0.05, output: 0.08, cacheRead: 0, cacheWrite: 0 },
+          },
+        ],
+      },
+      deepseek: {
+        baseUrl: "https://api.deepseek.com/v1",
+        apiKey: "${DEEPSEEK_API_KEY}",
+        api: "openai-chat",
+        models: [
+          {
+            id: "deepseek-coder",
+            name: "DeepSeek Coder V2",
+            reasoning: true,
+            input: ["text"],
+            contextWindow: 128000,
+            maxTokens: 16000,
+            cost: { input: 0.14, output: 0.28, cacheRead: 0.014, cacheWrite: 0 },
+          },
+        ],
+      },
+    },
+  },
+
+  // Telegram channel configuration
+  channels: {
+    telegram: {
+      enabled: true,
+      botToken: "${TELEGRAM_BOT_TOKEN}",
+      dmPolicy: "pairing",
+      groups: { "*": { requireMention: true } },
+    },
+  },
+
+  // Session configuration
+  session: {
+    dmScope: "per-channel-peer",
+    reset: {
+      mode: "idle",
+      idleMinutes: 120,
+    },
+    maintenance: {
+      mode: "warn",
+      pruneAfter: "7d",
+      maxEntries: 200,
+    },
+  },
+
+  // Routing and queue
+  routing: {
+    queue: {
+      mode: "collect",
+      debounceMs: 1000,
+      cap: 10,
+      drop: "summarize",
+    },
+  },
+
+  // Tools configuration
+  tools: {
+    allow: ["exec", "process", "read", "write", "edit", "apply_patch"],
+    exec: {
+      backgroundMs: 10000,
+      timeoutSec: 300,
+    },
+  },
+
+  // Skills configuration
+  skills: {
+    allowBundled: ["gemini", "github", "coding-agent", "clawhub", "healthcheck"],
+    install: {
+      nodeManager: "pnpm",
+    },
+  },
+
+  // Cron for log rotation and maintenance
+  cron: {
+    enabled: true,
+    maxConcurrentRuns: 1,
+    sessionRetention: "12h",
+    runLog: {
+      maxBytes: "1mb",
+      keepLines: 500,
+    },
+  },
+
+  // Gateway configuration
+  gateway: {
+    port: 8080,
+    bind: "lan",
+    controlUi: { enabled: true, basePath: "/openclaw" },
+    auth: {
+      mode: "token",
+      token: "${OPENCLAW_GATEWAY_TOKEN}",
+    },
+    reload: { mode: "hybrid", debounceMs: 500 },
+  },
+}
